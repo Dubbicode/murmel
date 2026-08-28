@@ -1,0 +1,247 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="980" d:DesignHeight="700"
+        x:Class="Murmel.MainWindow"
+        Width="980" Height="700"
+        Background="{DynamicResource BgPage}"
+        Icon="avares://Murmel/Assets/tray-icon.ico"
+        Title="Murmel">
+
+    <Grid RowDefinitions="60,*">
+
+        <!-- ===================== TOP BAR ===================== -->
+        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,32,*,Auto,10,Auto" Margin="28,0">
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Border Width="22" Height="22" CornerRadius="6" Background="{DynamicResource Accent}" />
+                    <TextBlock Text="Murmel" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="26" VerticalAlignment="Bottom" Height="60">
+                    <StackPanel VerticalAlignment="Bottom" Spacing="0">
+                        <Button Classes="tabBtn tabBtnActive" Name="TabRecorderBtn" Content="Aufnahme" Padding="0,0,0,17" />
+                        <Border Name="TabRecorderUnderline" Height="2" Background="{DynamicResource Accent}" Opacity="1" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Bottom" Spacing="0">
+                        <Button Classes="tabBtn" Name="TabHistoryBtn" Content="Verlauf" Padding="0,0,0,17" />
+                        <Border Name="TabHistoryUnderline" Height="2" Background="{DynamicResource Accent}" Opacity="0" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Bottom" Spacing="0">
+                        <Button Classes="tabBtn" Name="TabSettingsBtn" Content="Einstellungen" Padding="0,0,0,17" />
+                        <Border Name="TabSettingsUnderline" Height="2" Background="{DynamicResource Accent}" Opacity="0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Grid.Column="3" Background="{DynamicResource BadgeNeutralBg}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="6" Padding="10,5" VerticalAlignment="Center">
+                    <TextBlock Name="HotkeyBadgeText" Text="STRG + SHIFT" FontSize="11" FontFamily="Consolas,monospace"
+                               Foreground="{DynamicResource TextSecondary}" />
+                </Border>
+
+                <Button Grid.Column="5" Classes="iconBtn" Name="ThemeToggleBtn" Content="&#x263C;" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- ===================== MAIN CONTENT ===================== -->
+        <Grid Grid.Row="1" Margin="28,24">
+
+            <!-- Page: Recorder (bento-grid layout) -->
+            <Grid Name="RecorderPage" ColumnDefinitions="1.7*,16,*" RowDefinitions="*,16,Auto" IsVisible="True">
+
+                <!-- Recorder card -->
+                <Border Grid.Column="0" Grid.Row="0" Background="{DynamicResource BgPanel}"
+                        BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1" CornerRadius="16" Padding="24">
+                    <Grid RowDefinitions="Auto,*">
+                        <ProgressBar Grid.Row="0" Name="ModelProgressBar" Minimum="0" Maximum="100" Height="4"
+                                     IsVisible="False" Foreground="{DynamicResource Accent}" Margin="0,0,0,16" />
+
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+                            <Grid Width="176" Height="176" HorizontalAlignment="Center">
+                                <Ellipse Name="PingRing1" Width="88" Height="88" Fill="#3310B981"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
+                                <Ellipse Name="PingRing2" Width="88" Height="88" Fill="#3310B981"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
+                                <Button Classes="recordBtn" Name="RecordBtn" Content="&#x1F3A4;"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        RenderTransformOrigin="0.5,0.5" />
+                            </Grid>
+                            <TextBlock Name="StatusText" Text="Bereit" HorizontalAlignment="Center" FontSize="13"
+                                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="280"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Stat card -->
+                <Border Grid.Column="2" Grid.Row="0" Background="{DynamicResource BgPanel}"
+                        BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1" CornerRadius="16" Padding="22">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="HEUTE DIKTIERT" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextTertiary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Name="WordCountText" Text="0" FontSize="26" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="Wörter" FontSize="13" Foreground="{DynamicResource TextTertiary}"
+                                           VerticalAlignment="Bottom" Margin="0,0,0,4" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource BorderSoft}" />
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="INSGESAMT DIKTIERT" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextTertiary}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Name="TotalWordCountText" Text="0" FontSize="18" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="Wörter" FontSize="13" Foreground="{DynamicResource TextTertiary}"
+                                           VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource BorderSoft}" />
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="LETZTE AUFNAHME" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextTertiary}" />
+                            <TextBlock Name="LastRecordingText" Text="–" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                        </StackPanel>
+
+                        <Border Height="1" Background="{DynamicResource BorderSoft}" />
+
+                        <Border Background="{DynamicResource BadgeAccentBg}" CornerRadius="10" Padding="10,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource Accent}" />
+                                <TextBlock Name="ModelStatusBadgeText" Text="Modell wird geladen…" FontSize="12"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource BadgeAccentText}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Transcript card -->
+                <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Background="{DynamicResource BgPanel}"
+                        BorderBrush="{DynamicResource BorderSubtle}" BorderThickness="1" CornerRadius="16"
+                        Padding="20" Height="230">
+                    <Grid RowDefinitions="*,Auto">
+                        <TextBox Grid.Row="0" Classes="editor" Name="TextEditor"
+                                 Watermark="Dein transkribierter Text erscheint hier..." />
+                        <Border Grid.Row="1" Height="1" Background="{DynamicResource BorderSoft}" Margin="0,10" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="20" Margin="0,10,0,0">
+                            <Button Classes="ghost" Name="CopyBtn" Content="Kopieren" />
+                            <Button Classes="ghost" Name="ClearBtn" Content="Löschen" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Page: History -->
+            <Grid Name="HistoryPage" RowDefinitions="Auto,*" IsVisible="False">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+                    <TextBlock Grid.Column="0" Text="Verlauf" FontSize="22" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <Button Grid.Column="1" Classes="ghost" Name="ClearHistoryBtn" Content="Verlauf leeren" />
+                </Grid>
+                <ScrollViewer Grid.Row="1">
+                    <ItemsControl Name="HistoryList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                                        BorderThickness="1" CornerRadius="12" Padding="16,12" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayTime}"
+                                                   Foreground="{DynamicResource TextTertiary}"
+                                                   FontSize="12" VerticalAlignment="Top" Margin="0,0,16,0" />
+                                        <!-- SelectableTextBlock (not TextBlock) so the full dictated
+                                             text can be selected/dragged and copied with Ctrl+C. -->
+                                        <SelectableTextBlock Grid.Column="1" Text="{Binding Text}"
+                                                   Foreground="{DynamicResource TextPrimary}"
+                                                   TextWrapping="Wrap" />
+                                        <Button Grid.Column="2" Classes="ghost" Content="Kopieren"
+                                                Tag="{Binding}" Click="OnHistoryItemCopyClicked"
+                                                VerticalAlignment="Top" Margin="12,0,0,0" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Page: Settings -->
+            <StackPanel Name="SettingsPage" IsVisible="False" Spacing="20">
+                <TextBlock Text="Einstellungen" FontSize="22" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,8" />
+
+                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Hotkey (Push-to-Talk)" FontWeight="Medium"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="Kombination halten = aufnehmen, loslassen = einfügen"
+                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Name="HotkeyPresetCombo" MinWidth="160" />
+                    </Grid>
+                </Border>
+
+                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Automatisch ins aktive Fenster einfügen" FontWeight="Medium"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="Text wird direkt dort eingefügt, wo dein Cursor gerade ist — kein Copy/Paste nötig"
+                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" Name="AutoPasteToggle" IsChecked="True"
+                                      OnContent="" OffContent="" />
+                    </Grid>
+                </Border>
+
+                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Mit Windows starten" FontWeight="Medium"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="Murmel startet dann automatisch im Hintergrund, wenn du dich bei Windows anmeldest — keine Installation nötig."
+                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" Name="AutostartToggle" IsChecked="False"
+                                      OnContent="" OffContent="" />
+                    </Grid>
+                </Border>
+
+                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="12" Padding="18">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="Hintergrund-Widget" FontWeight="Medium"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="Der kleine Balken lässt sich direkt auf dem Bildschirm per Ziehen verschieben."
+                                       FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="ghost" Name="ResetIndicatorPositionBtn" Content="Position zurücksetzen" />
+                    </Grid>
+                </Border>
+
+                <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        BorderThickness="1" CornerRadius="12" Padding="18">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Mikrofon" FontWeight="Medium" Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="Standard-Mikrofon von Windows (Auswahl einzelner Geräte folgt später)"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
