@@ -94,7 +94,7 @@ public class RecordingIndicatorWindow : Window
                 Height = MinBarHeight,
                 RadiusX = 1.5,
                 RadiusY = 1.5,
-                Fill = new SolidColorBrush(Color.Parse("#10B981")),
+                Fill = new SolidColorBrush(Color.Parse("#F0B429")),
                 VerticalAlignment = VerticalAlignment.Center
             };
             _bars[i] = bar;

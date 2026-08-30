@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -17,6 +18,13 @@ public partial class MainWindow : Window
     private bool _isModelReady;
     private IntPtr _foregroundWindowBeforeRecording;
 
+    // Remembers exactly what text was last pasted into another app and where, so a
+    // follow-up voice-correction command ("korrigiere X zu Y") can undo just that paste
+    // (via backspaces) and re-inject the corrected version. Null once nothing has been
+    // injected yet, or after the text no longer matches what a correction would expect.
+    private string? _lastInjectedText;
+    private IntPtr _lastInjectionTarget;
+
     // Tracked explicitly rather than reading the Window's own IsVisible property:
     // that property can lag a beat behind an immediately-preceding Hide()/Show() call,
     // which made the background indicator unreliable. We flip this ourselves at the
@@ -32,20 +40,12 @@ public partial class MainWindow : Window
     private readonly GlobalHotkeyService _hotkey = new();
     private readonly HistoryStore _history = new();
     private readonly AppSettingsStore _settings = new();
+    private readonly DictionaryStore _dictionary = new();
     private readonly StatsStore _stats = new();
     private readonly ModelManager _models = new();
     private readonly AudioRecorder _audioRecorder = new();
     private ParakeetTranscriber? _transcriber;
     private readonly RecordingIndicatorWindow _indicator = new();
-
-    // Drives the recorder card's idle "breathing" pulse and the two expanding ping
-    // rings behind the mic button - a gentler, always-on echo of the design mockup's
-    // CSS animation (a DispatcherTimer loop rather than XAML Animation/keyframes,
-    // since we can't test real Avalonia keyframe behavior on the user's Windows PC
-    // and this project has already been bitten once by an untested rendering approach).
-    private readonly DispatcherTimer _micAnimTimer = new() { Interval = TimeSpan.FromMilliseconds(30) };
-    private double _micAnimElapsed;
-    private const double MicAnimPeriodSeconds = 2.4;
 
     // Refreshes the "vor X Minuten" relative-time text on the stat card periodically,
     // so it doesn't go stale while the Recorder page is just sitting open.
@@ -60,10 +60,38 @@ public partial class MainWindow : Window
         ClearBtn.Click += (_, _) => TextEditor.Text = string.Empty;
         ThemeToggleBtn.Click += OnThemeToggleClicked;
 
-        TabRecorderBtn.Click += (_, _) => ShowPage(RecorderPage, TabRecorderBtn, TabRecorderUnderline);
-        TabHistoryBtn.Click += (_, _) => ShowPage(HistoryPage, TabHistoryBtn, TabHistoryUnderline);
-        TabSettingsBtn.Click += (_, _) => ShowPage(SettingsPage, TabSettingsBtn, TabSettingsUnderline);
+        TabRecorderBtn.Click += (_, _) => ShowPage(RecorderPage, TabRecorderBtn);
+        TabHistoryBtn.Click += (_, _) => ShowPage(HistoryPage, TabHistoryBtn);
+        TabDictionaryBtn.Click += (_, _) => ShowPage(DictionaryPage, TabDictionaryBtn);
+        TabSettingsBtn.Click += (_, _) => ShowPage(SettingsPage, TabSettingsBtn);
         ClearHistoryBtn.Click += (_, _) => { _history.Clear(); RefreshHistoryList(); UpdateStats(); };
+        HistorySearchBox.TextChanged += (_, _) => RefreshHistoryList();
+
+        AddCorrectionBtn.Click += (_, _) =>
+        {
+            var wrong = NewCorrectionWrongBox.Text?.Trim();
+            var right = NewCorrectionRightBox.Text?.Trim();
+            if (string.IsNullOrEmpty(wrong) || string.IsNullOrEmpty(right)) return;
+
+            _dictionary.Data.Corrections.Add(new CorrectionEntry { Wrong = wrong, Right = right });
+            _dictionary.Save();
+            NewCorrectionWrongBox.Text = "";
+            NewCorrectionRightBox.Text = "";
+            RefreshDictionaryLists();
+        };
+
+        AddSnippetBtn.Click += (_, _) =>
+        {
+            var trigger = NewSnippetTriggerBox.Text?.Trim();
+            var value = NewSnippetValueBox.Text?.Trim();
+            if (string.IsNullOrEmpty(trigger) || string.IsNullOrEmpty(value)) return;
+
+            _dictionary.Data.Snippets.Add(new SnippetEntry { Trigger = trigger, Value = value });
+            _dictionary.Save();
+            NewSnippetTriggerBox.Text = "";
+            NewSnippetValueBox.Text = "";
+            RefreshDictionaryLists();
+        };
 
         ResetIndicatorPositionBtn.Click += (_, _) =>
         {
@@ -106,23 +134,45 @@ public partial class MainWindow : Window
         HotkeyBadgeText.Text = HotkeyPresetInfo.GetDisplayName(_settings.Data.Hotkey).ToUpperInvariant();
         StatusText.Text = ReadyStatusText();
 
+        RecordingModeToggle.IsChecked = _settings.Data.RecordingMode == RecordingMode.Toggle;
+        RecordingModeToggle.IsCheckedChanged += (_, _) =>
+        {
+            _settings.Data.RecordingMode = RecordingModeToggle.IsChecked == true
+                ? RecordingMode.Toggle
+                : RecordingMode.PushToTalk;
+            _settings.Save();
+        };
+
         // First run of the lifetime word counter: backfill from whatever history is
         // already on disk (up to 200 entries) so existing users don't start at 0.
         _stats.SeedIfFresh(_history.Entries.Sum(e => CountWords(e.Text)));
+        _stats.SeedDailyIfEmpty(_history.Entries.Select(e => (e.Timestamp, CountWords(e.Text))));
+
+        // The chart needs the Canvas's actual pixel width to place points, which isn't
+        // known yet on the very first UpdateStats() call above (layout hasn't run) -
+        // redraw once it is.
+        WeekChartCanvas.SizeChanged += (_, _) => UpdateWeekChart();
 
         RefreshHistoryList();
         UpdateStats();
 
-        _micAnimTimer.Tick += (_, _) => AnimateMic();
-        _micAnimTimer.Start();
-
         _statsRefreshTimer.Tick += (_, _) => { if (RecorderPage.IsVisible) UpdateStats(); };
         _statsRefreshTimer.Start();
 
-        // Global push-to-talk hotkey: works even while another app is focused.
+        // Global hotkey: works even while another app is focused. Two modes (see
+        // Settings): Push-to-Talk (hold = record, release = stop, the original
+        // behavior) or Toggle (press once to start, press again to stop - the release
+        // event is then ignored entirely).
         _hotkey.Preset = _settings.Data.Hotkey;
-        _hotkey.HotkeyPressed += () => Dispatcher.UIThread.Post(StartRecording);
-        _hotkey.HotkeyReleased += () => Dispatcher.UIThread.Post(() => _ = StopRecordingAndTranscribeAsync());
+        _hotkey.HotkeyPressed += () => Dispatcher.UIThread.Post(() =>
+        {
+            if (_settings.Data.RecordingMode == RecordingMode.Toggle) ToggleRecording();
+            else StartRecording();
+        });
+        _hotkey.HotkeyReleased += () => Dispatcher.UIThread.Post(() =>
+        {
+            if (_settings.Data.RecordingMode == RecordingMode.PushToTalk) _ = StopRecordingAndTranscribeAsync();
+        });
         _hotkey.Start();
 
         // Clicking the small background indicator brings Murmel back to the foreground.
@@ -246,7 +296,6 @@ public partial class MainWindow : Window
             ModelProgressBar.IsVisible = false;
             RecordBtn.IsEnabled = true;
             StatusText.Text = ReadyStatusText();
-            ModelStatusBadgeText.Text = "Modell lokal geladen";
         }
         catch (Exception ex)
         {
@@ -257,47 +306,185 @@ public partial class MainWindow : Window
     private string ReadyStatusText() =>
         $"Bereit — {HotkeyPresetInfo.GetDisplayName(_settings.Data.Hotkey)} halten zum Sprechen";
 
-    private void ShowPage(Control page, Button activeTabBtn, Border activeUnderline)
+    private void ShowPage(Control page, Button activeNavBtn)
     {
         RecorderPage.IsVisible = ReferenceEquals(page, RecorderPage);
         HistoryPage.IsVisible = ReferenceEquals(page, HistoryPage);
+        DictionaryPage.IsVisible = ReferenceEquals(page, DictionaryPage);
         SettingsPage.IsVisible = ReferenceEquals(page, SettingsPage);
 
-        foreach (var btn in new[] { TabRecorderBtn, TabHistoryBtn, TabSettingsBtn })
-            btn.Classes.Remove("tabBtnActive");
-        activeTabBtn.Classes.Add("tabBtnActive");
-
-        foreach (var underline in new[] { TabRecorderUnderline, TabHistoryUnderline, TabSettingsUnderline })
-            underline.Opacity = 0;
-        activeUnderline.Opacity = 1;
+        foreach (var btn in new[] { TabRecorderBtn, TabHistoryBtn, TabDictionaryBtn, TabSettingsBtn })
+            btn.Classes.Remove("navIconBtnActive");
+        activeNavBtn.Classes.Add("navIconBtnActive");
 
         if (ReferenceEquals(page, HistoryPage))
             RefreshHistoryList();
+        if (ReferenceEquals(page, DictionaryPage))
+            RefreshDictionaryLists();
         if (ReferenceEquals(page, RecorderPage))
+        {
             UpdateStats();
+            RefreshHistoryPreview();
+            RefreshDictionaryPreview();
+        }
+    }
+
+    private void OnGoToHistoryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        ShowPage(HistoryPage, TabHistoryBtn);
+
+    private void OnGoToDictionaryClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        ShowPage(DictionaryPage, TabDictionaryBtn);
+
+    private void RefreshDictionaryLists()
+    {
+        // A fresh list instance each time (not null-then-reassign) - Avalonia's
+        // ItemsControl crashes with an ArgumentOutOfRangeException in some versions when
+        // ItemsSource goes null -> populated in quick succession (confirmed via the
+        // Windows crash log). A new List<T> reference is recognized as a real change
+        // without ever passing through null.
+        CorrectionsList.ItemsSource = _dictionary.Data.Corrections.ToList();
+        SnippetsList.ItemsSource = _dictionary.Data.Snippets.ToList();
+        RefreshDictionaryPreview();
+    }
+
+    /// <summary>Wörterbuch-Kachel on the Aufnahme home page - a few snippet-trigger chips,
+    /// independent of whatever's currently on the full Wörterbuch page.</summary>
+    private void RefreshDictionaryPreview()
+    {
+        DictionaryPreviewList.ItemsSource = _dictionary.Data.Snippets.Take(6).ToList();
+    }
+
+    // Fires when a Korrekturen/Snippets row's inline TextBox loses focus - the TwoWay
+    // binding has already written the edited value straight into the underlying
+    // CorrectionEntry/SnippetEntry object by then, so this just needs to persist it.
+    private void OnDictionaryFieldEdited(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _dictionary.Save();
+    }
+
+    private void OnRemoveCorrectionClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not CorrectionEntry entry) return;
+        _dictionary.Data.Corrections.Remove(entry);
+        _dictionary.Save();
+        RefreshDictionaryLists();
+    }
+
+    private void OnRemoveSnippetClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not SnippetEntry entry) return;
+        _dictionary.Data.Snippets.Remove(entry);
+        _dictionary.Save();
+        RefreshDictionaryLists();
     }
 
     private void RefreshHistoryList()
     {
-        HistoryList.ItemsSource = null;
-        HistoryList.ItemsSource = _history.Entries;
+        var query = HistorySearchBox.Text?.Trim();
+        var filtered = string.IsNullOrEmpty(query)
+            ? _history.Entries
+            : _history.Entries.Where(e => e.Text.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+        // Entries are already newest-first, so a day header goes in right before the
+        // first entry of each new (older) day encountered while walking the list.
+        var items = new List<object>();
+        DateTime? lastDate = null;
+        foreach (var entry in filtered)
+        {
+            var date = entry.Timestamp.Date;
+            if (date != lastDate)
+            {
+                items.Add(new HistoryDateHeader { Label = FormatHistoryDateHeader(date) });
+                lastDate = date;
+            }
+            items.Add(entry);
+        }
+
+        // See RefreshDictionaryLists for why this is a fresh list, not null-then-reassign.
+        HistoryList.ItemsSource = items;
+        HistoryEmptySearchText.IsVisible = items.Count == 0 && !string.IsNullOrEmpty(query);
+        RefreshHistoryPreview();
     }
 
-    /// <summary>Updates the stat card: today's word count and how long ago the last
-    /// dictation happened. Called after every new recording and periodically while
-    /// the Recorder page is open, so "vor X Minuten" doesn't go stale.</summary>
-    private void UpdateStats()
+    /// <summary>Verlauf-Kachel on the Aufnahme home page - always the most recent entries,
+    /// independent of whatever search is active on the full Verlauf page.</summary>
+    private void RefreshHistoryPreview()
+    {
+        HistoryPreviewList.ItemsSource = _history.Entries.Take(4).ToList();
+    }
+
+    private static string FormatHistoryDateHeader(DateTime date)
     {
         var today = DateTime.Today;
-        int wordCount = _history.Entries
-            .Where(e => e.Timestamp.Date == today)
-            .Sum(e => CountWords(e.Text));
-        WordCountText.Text = wordCount.ToString();
+        if (date == today) return "Heute";
+        if (date == today.AddDays(-1)) return "Gestern";
+        return date.ToString("dd.MM.yyyy");
+    }
+
+    /// <summary>Updates the stat card: today's word count, the lifetime total, how long
+    /// ago the last dictation happened, and the 7-day chart. Called after every new
+    /// recording and periodically while the Recorder page is open, so "vor X Minuten"
+    /// doesn't go stale.</summary>
+    private void UpdateStats()
+    {
+        // Read from StatsStore (persists independent of HistoryStore) rather than
+        // summing today's history entries directly, so "Verlauf leeren" or the
+        // 200-entry cap can never make today's count drop or look wrong.
+        WordCountText.Text = _stats.GetWordsForDay(DateTime.Today).ToString();
 
         TotalWordCountText.Text = _stats.Data.TotalWordsSpoken.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
 
         var last = _history.Entries.FirstOrDefault(); // newest is inserted at index 0
         LastRecordingText.Text = last is null ? "–" : FormatRelativeTime(last.Timestamp);
+
+        UpdateWeekChart();
+    }
+
+    private static readonly string[] GermanDayAbbreviations = { "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So" };
+
+    private void UpdateWeekChart()
+    {
+        // Canvas hasn't been laid out yet (e.g. the very first call from the
+        // constructor) - it fires SizeChanged once it has a real width, which re-runs
+        // this and draws correctly then.
+        double width = WeekChartCanvas.Bounds.Width;
+        if (width <= 0) return;
+
+        var dots = new[] { DayDot0, DayDot1, DayDot2, DayDot3, DayDot4, DayDot5, DayDot6 };
+        var countLabels = new[] { DayCount0, DayCount1, DayCount2, DayCount3, DayCount4, DayCount5, DayCount6 };
+        var labels = new[] { DayLabel0, DayLabel1, DayLabel2, DayLabel3, DayLabel4, DayLabel5, DayLabel6 };
+
+        var today = DateTime.Today;
+        var days = Enumerable.Range(0, 7).Select(i => today.AddDays(-6 + i)).ToArray(); // oldest..today, left to right
+        var counts = days.Select(d => _stats.GetWordsForDay(d)).ToArray();
+        int max = Math.Max(counts.Max(), 1);
+
+        const double topPadding = 16;  // room for the value label above the highest point
+        const double plotHeight = 40;  // vertical space the line itself moves within
+
+        var points = new Avalonia.Points();
+        for (int i = 0; i < 7; i++)
+        {
+            double x = i * (width / 6);
+            double y = topPadding + plotHeight * (1 - (double)counts[i] / max);
+            points.Add(new Point(x, y));
+
+            Canvas.SetLeft(dots[i], x - dots[i].Width / 2);
+            Canvas.SetTop(dots[i], y - dots[i].Height / 2);
+
+            countLabels[i].Text = counts[i].ToString();
+            Canvas.SetLeft(countLabels[i], x - 8);
+            Canvas.SetTop(countLabels[i], y - 18);
+
+            // ISO: Monday = 1 .. Sunday = 7, matching the Mo..So label order above.
+            int dayIndex = ((int)days[i].DayOfWeek + 6) % 7;
+            labels[i].Text = GermanDayAbbreviations[dayIndex];
+            // Bold (rather than a swapped-in color) highlights today without needing a
+            // resolved-once brush that would go stale until the next refresh if the
+            // user switches Light/Dark mode in between.
+            labels[i].FontWeight = days[i] == today ? FontWeight.Bold : FontWeight.Normal;
+        }
+        WeekChartLine.Points = points;
     }
 
     private static int CountWords(string text) =>
@@ -319,31 +506,6 @@ public partial class MainWindow : Window
         }
         var d = (int)span.TotalDays;
         return $"vor {d} Tag{(d == 1 ? "" : "en")}";
-    }
-
-    /// <summary>Ticks the recorder card's idle animation: a gentle breathing scale on
-    /// the mic button plus two staggered rings that expand and fade behind it - the
-    /// same idea as the approved mockup's CSS pulse/ping, always running.</summary>
-    private void AnimateMic()
-    {
-        _micAnimElapsed += 0.03;
-
-        double buttonPhase = (1 - Math.Cos(2 * Math.PI * (_micAnimElapsed % MicAnimPeriodSeconds) / MicAnimPeriodSeconds)) / 2;
-        double scale = 1 + 0.05 * buttonPhase;
-        RecordBtn.RenderTransform = new ScaleTransform(scale, scale);
-
-        AnimateRing(PingRing1, _micAnimElapsed);
-        AnimateRing(PingRing2, _micAnimElapsed + MicAnimPeriodSeconds / 2);
-    }
-
-    private static void AnimateRing(Ellipse ring, double elapsed)
-    {
-        double phase = (elapsed % MicAnimPeriodSeconds) / MicAnimPeriodSeconds; // 0..1
-        double size = 88 + phase * 88; // grows from 88 to 176
-        double opacity = 0.55 * (1 - phase) * (1 - phase); // ease-out fade
-        ring.Width = size;
-        ring.Height = size;
-        ring.Opacity = opacity;
     }
 
     private void ToggleRecording()
@@ -400,13 +562,45 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Personal dictionary: fix reliably-mis-heard words and resolve any snippet
+        // triggers first, so every check below (self-correction, correction commands,
+        // history) already sees the final text.
+        recognizedText = DictionaryProcessor.ApplyCorrections(recognizedText, _dictionary.Data);
+        recognizedText = DictionaryProcessor.ApplySnippets(recognizedText, _dictionary.Data);
+
+        // Self-correction WITHIN the same recording - "Wir treffen uns am Montag. Nein,
+        // am Dienstag." said in one continuous take - is by far the most common way
+        // people actually correct themselves out loud. Detect and resolve it before
+        // anything else so the cleaned-up text is what gets added/pasted below.
+        var embeddedCorrection = CorrectionCommandParser.TryParseEmbeddedCorrection(recognizedText);
+        if (embeddedCorrection is not null)
+        {
+            recognizedText = embeddedCorrection.Value.CleanedText;
+            StatusText.Text = $"Selbstkorrektur erkannt: „{embeddedCorrection.Value.Command.Find}“ → „{embeddedCorrection.Value.Command.Replace}“";
+        }
+        else
+        {
+            // A correction command ("korrigiere X zu Y") as its OWN separate recording is
+            // about the PREVIOUS dictation, not new text of its own - handle it separately
+            // and stop here rather than adding it to the transcript/history/word count
+            // like a normal dictation.
+            var correction = CorrectionCommandParser.TryParse(recognizedText, _history.Entries.FirstOrDefault()?.Text);
+            if (correction is not null)
+            {
+                await ApplyCorrectionAsync(correction);
+                return;
+            }
+        }
+
         TextEditor.Text = string.IsNullOrEmpty(TextEditor.Text)
             ? recognizedText
             : TextEditor.Text + " " + recognizedText;
 
         _history.Add(recognizedText);
         _stats.AddWords(CountWords(recognizedText));
-        if (HistoryPage.IsVisible) RefreshHistoryList();
+        // Always refresh (not just when HistoryPage is visible) - the Aufnahme home page
+        // now also shows a live Verlauf-Vorschau tile.
+        RefreshHistoryList();
         UpdateStats();
 
         if (_settings.Data.AutoPasteIntoActiveWindow)
@@ -416,9 +610,78 @@ public partial class MainWindow : Window
             var textToInject = recognizedText.EndsWith(' ') ? recognizedText : recognizedText + " ";
             var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
             await TextInjector.InjectAsync(clipboard, textToInject, _foregroundWindowBeforeRecording);
+            _lastInjectedText = textToInject;
+            _lastInjectionTarget = _foregroundWindowBeforeRecording;
+        }
+        else
+        {
+            _lastInjectedText = null;
         }
 
         StatusText.Text = ReadyStatusText();
+    }
+
+    /// <summary>
+    /// Applies a spoken "korrigiere X zu Y" / "ersetze X durch Y" / "ändere X zu Y" command
+    /// to the most recently dictated text: in the in-app editor, in the saved history entry,
+    /// and - best-effort - in whatever app the previous dictation was pasted into.
+    /// </summary>
+    private async System.Threading.Tasks.Task ApplyCorrectionAsync(CorrectionCommand correction)
+    {
+        var lastEntry = _history.Entries.FirstOrDefault();
+        if (lastEntry is null || string.IsNullOrEmpty(lastEntry.Text))
+        {
+            StatusText.Text = "Keine vorherige Diktion zum Korrigieren gefunden";
+            return;
+        }
+
+        var original = lastEntry.Text;
+        int idx = original.LastIndexOf(correction.Find, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            StatusText.Text = $"„{correction.Find}“ wurde im letzten Text nicht gefunden";
+            return;
+        }
+
+        var corrected = original[..idx] + correction.Replace + original[(idx + correction.Find.Length)..];
+
+        // 1) Saved history entry
+        lastEntry.Text = corrected;
+        _history.Save();
+        RefreshHistoryList();
+
+        // 2) In-app transcript editor - replace the same occurrence at the tail of the
+        // current text (the editor may hold several concatenated dictations already).
+        if (!string.IsNullOrEmpty(TextEditor.Text))
+        {
+            int editorIdx = TextEditor.Text.LastIndexOf(original, StringComparison.OrdinalIgnoreCase);
+            if (editorIdx >= 0)
+            {
+                TextEditor.Text = TextEditor.Text[..editorIdx] + corrected + TextEditor.Text[(editorIdx + original.Length)..];
+            }
+            else
+            {
+                int wordIdx = TextEditor.Text.LastIndexOf(correction.Find, StringComparison.OrdinalIgnoreCase);
+                if (wordIdx >= 0)
+                    TextEditor.Text = TextEditor.Text[..wordIdx] + correction.Replace + TextEditor.Text[(wordIdx + correction.Find.Length)..];
+            }
+        }
+
+        // 3) Whatever app the previous dictation was pasted into - only attempted if we
+        // know exactly what we pasted there and it still matches the uncorrected text
+        // (best-effort: relies on the cursor still sitting right after that paste).
+        if (_settings.Data.AutoPasteIntoActiveWindow
+            && _lastInjectedText is not null
+            && _lastInjectedText.TrimEnd() == original.TrimEnd())
+        {
+            var correctedInjected = corrected.EndsWith(' ') ? corrected : corrected + " ";
+            await TextInjector.SendBackspacesAsync(_lastInjectedText.Length, _lastInjectionTarget);
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            await TextInjector.InjectAsync(clipboard, correctedInjected, _lastInjectionTarget);
+            _lastInjectedText = correctedInjected;
+        }
+
+        StatusText.Text = $"Korrigiert: „{correction.Find}“ → „{correction.Replace}“";
     }
 
     private async void OnCopyClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

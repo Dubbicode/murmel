@@ -20,57 +20,60 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
-                <!-- Tokens match the approved "Murmel UI Entwurf" design canvas (Richtung C,
-                     minimal/bento-grid): a flat, bordered-card look rather than colored-fill
-                     panels, plus a couple of extra tone steps (Tertiary/Soft) the new layout needs. -->
+                <!-- Tokens match the approved "Murmel UI Entwurf" design canvas, Richtung H
+                     (Icon-Seitenleiste + Kachel-Raster): warm near-black dark theme with an
+                     amber accent, plus a matching warm-neutral light theme (same accent). -->
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="BgPage">#FAFAFA</SolidColorBrush>
+                    <SolidColorBrush x:Key="BgPage">#FAF8F4</SolidColorBrush>
                     <SolidColorBrush x:Key="BgPanel">#FFFFFF</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextPrimary">#18181B</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextSecondary">#71717A</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextTertiary">#A1A1AA</SolidColorBrush>
-                    <SolidColorBrush x:Key="BorderSubtle">#E4E4E7</SolidColorBrush>
-                    <SolidColorBrush x:Key="BorderSoft">#F0F0F1</SolidColorBrush>
-                    <SolidColorBrush x:Key="PlaceholderColor">#B4B4B8</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeNeutralBg">#F4F4F5</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeAccentBg">#ECFDF5</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeAccentText">#0EA271</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextPrimary">#201D18</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextSecondary">#6E685D</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextTertiary">#9C9689</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderSubtle">#E8E1D3</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderSoft">#F1ECE1</SolidColorBrush>
+                    <SolidColorBrush x:Key="PlaceholderColor">#B0A996</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeNeutralBg">#F3EEE5</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeAccentBg">#FBF0D9</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeAccentText">#A6710A</SolidColorBrush>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="BgPage">#0F0F11</SolidColorBrush>
-                    <SolidColorBrush x:Key="BgPanel">#18181B</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextPrimary">#FAFAFA</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextSecondary">#A1A1AA</SolidColorBrush>
-                    <SolidColorBrush x:Key="TextTertiary">#71717A</SolidColorBrush>
-                    <SolidColorBrush x:Key="BorderSubtle">#2A2A2E</SolidColorBrush>
-                    <SolidColorBrush x:Key="BorderSoft">#232326</SolidColorBrush>
-                    <SolidColorBrush x:Key="PlaceholderColor">#54545A</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeNeutralBg">#202023</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeAccentBg">#10B98122</SolidColorBrush>
-                    <SolidColorBrush x:Key="BadgeAccentText">#34D399</SolidColorBrush>
+                    <SolidColorBrush x:Key="BgPage">#0E0D0C</SolidColorBrush>
+                    <SolidColorBrush x:Key="BgPanel">#171513</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextPrimary">#F4F0EA</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextSecondary">#A29A8E</SolidColorBrush>
+                    <SolidColorBrush x:Key="TextTertiary">#6D665C</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderSubtle">#2A2621</SolidColorBrush>
+                    <SolidColorBrush x:Key="BorderSoft">#221F1B</SolidColorBrush>
+                    <SolidColorBrush x:Key="PlaceholderColor">#6D665C</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeNeutralBg">#1E1B18</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeAccentBg">#F0B4291F</SolidColorBrush>
+                    <SolidColorBrush x:Key="BadgeAccentText">#F7C95C</SolidColorBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <!-- Accent: Green, as chosen for the project - same in both themes -->
-            <SolidColorBrush x:Key="Accent">#10B981</SolidColorBrush>
-            <SolidColorBrush x:Key="AccentHover">#0EA271</SolidColorBrush>
-            <SolidColorBrush x:Key="AccentSoft">#10B98122</SolidColorBrush>
+            <!-- Accent: Amber, as chosen for the project (Richtung H) - same in both themes -->
+            <SolidColorBrush x:Key="Accent">#F0B429</SolidColorBrush>
+            <SolidColorBrush x:Key="AccentHover">#D99A1F</SolidColorBrush>
+            <SolidColorBrush x:Key="AccentSoft">#F0B42922</SolidColorBrush>
         </ResourceDictionary>
     </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
 
-        <!-- Record button: solid accent circle (matches the approved design's mic button) -->
+        <!-- Record button: small solid accent circle, sitting in the status strip rather
+             than being the page's centerpiece (Richtung H - hotkey is the primary way to
+             record, this is just a status indicator + fallback click target). Dark icon
+             on the amber fill reads better than white. -->
         <Style Selector="Button.recordBtn">
-            <Setter Property="Width" Value="88" />
-            <Setter Property="Height" Value="88" />
-            <Setter Property="CornerRadius" Value="44" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="CornerRadius" Value="15" />
             <Setter Property="Background" Value="{DynamicResource Accent}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontSize" Value="30" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#171513" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Transitions">
@@ -84,6 +87,33 @@
         </Style>
         <Style Selector="Button.recordBtn.isRecording">
             <Setter Property="Background" Value="{DynamicResource AccentHover}" />
+        </Style>
+
+        <!-- Sidebar icon-only nav buttons (replaces the old top tab bar) -->
+        <Style Selector="Button.navIconBtn">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.navIconBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderSoft}" />
+        </Style>
+        <Style Selector="Button.navIconBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="Button.navIconBtnActive">
+            <Setter Property="Background" Value="{DynamicResource BadgeAccentBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource BadgeAccentText}" />
+        </Style>
+        <Style Selector="Button.navIconBtnActive:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BadgeAccentBg}" />
         </Style>
 
         <!-- Borderless text editor - sits directly inside the transcript card, which
@@ -113,43 +143,5 @@
             <Setter Property="Background" Value="{DynamicResource BorderSoft}" />
         </Style>
 
-        <!-- Top-bar tabs (replaces the old sidebar nav items) -->
-        <Style Selector="Button.tabBtn">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontSize" Value="13.5" />
-            <Setter Property="FontWeight" Value="Medium" />
-        </Style>
-        <Style Selector="Button.tabBtn:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="Button.tabBtn:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-        </Style>
-        <Style Selector="Button.tabBtnActive">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-
-        <!-- Small square icon buttons in the top bar (theme toggle) -->
-        <Style Selector="Button.iconBtn">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="30" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Button.iconBtn:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource BorderSoft}" />
-        </Style>
     </Application.Styles>
 </Application>

@@ -4,10 +4,22 @@ using System.Text.Json;
 
 namespace Murmel.Services;
 
+/// <summary>How the hotkey triggers a recording.</summary>
+public enum RecordingMode
+{
+    /// <summary>Hold the hotkey down to record, release to stop (the original behavior).</summary>
+    PushToTalk,
+
+    /// <summary>Press the hotkey once to start recording, press it again to stop -
+    /// no need to hold it down.</summary>
+    Toggle
+}
+
 public class AppSettingsData
 {
     public bool AutoPasteIntoActiveWindow { get; set; } = true;
     public HotkeyPreset Hotkey { get; set; } = HotkeyPreset.CtrlShift;
+    public RecordingMode RecordingMode { get; set; } = RecordingMode.PushToTalk;
     public bool StartMinimizedToTray { get; set; } = false;
 
     // Null = use the default bottom-center placement. Set once the user drags the

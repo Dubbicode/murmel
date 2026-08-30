@@ -28,6 +28,7 @@ public static class TextInjector
 
     private const byte VK_CONTROL = 0x11;
     private const byte VK_V = 0x56;
+    private const byte VK_BACK = 0x08;
     private const uint KEYEVENTF_KEYUP = 0x0002;
 
     public static IntPtr CaptureCurrentForegroundWindow() => GetForegroundWindow();
@@ -51,6 +52,33 @@ public static class TextInjector
         }
 
         SendCtrlV();
+    }
+
+    /// <summary>
+    /// Sends <paramref name="count"/> Backspace keystrokes to <paramref name="targetWindow"/> -
+    /// used by the voice-correction command to delete a previously-injected dictation before
+    /// re-injecting the corrected version. Best-effort: this only produces the right result if
+    /// the text cursor in the target app is still exactly where the previous paste left it
+    /// (i.e. the user hasn't clicked elsewhere or typed anything since).
+    /// </summary>
+    public static async System.Threading.Tasks.Task SendBackspacesAsync(int count, IntPtr targetWindow)
+    {
+        if (count <= 0) return;
+
+        if (targetWindow != IntPtr.Zero)
+        {
+            SetForegroundWindow(targetWindow);
+            await System.Threading.Tasks.Task.Delay(60);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            keybd_event(VK_BACK, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_BACK, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            // small pacing delay so apps that process input synchronously (e.g. some
+            // Electron/web-based editors) don't drop keystrokes sent back-to-back
+            await System.Threading.Tasks.Task.Delay(8);
+        }
     }
 
     private static void SendCtrlV()

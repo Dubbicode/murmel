@@ -62,7 +62,10 @@ public class HistoryStore
         }
     }
 
-    private void Save()
+    /// <summary>Persists the current Entries to disk. Public so a caller that mutates an
+    /// existing entry in place (e.g. a voice-correction command fixing the last dictation)
+    /// can save that change without needing an Add/Clear-shaped API.</summary>
+    public void Save()
     {
         try
         {
