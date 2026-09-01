@@ -22,6 +22,15 @@ public class AppSettingsData
     public RecordingMode RecordingMode { get; set; } = RecordingMode.PushToTalk;
     public bool StartMinimizedToTray { get; set; } = false;
 
+    // Second, independent hotkey: records a voice note instead of dictating into the
+    // active window. Defaults to a different combo than Hotkey so both work out of the box.
+    public HotkeyPreset NotesHotkey { get; set; } = HotkeyPreset.CtrlAlt;
+    public bool ShowCompletedNotes { get; set; } = true;
+
+    // Null = use the default local %AppData%\Typr folder (see NotesStore). Set once the
+    // user picks a folder (e.g. inside Google Drive) in Einstellungen.
+    public string? NotesFolderPath { get; set; }
+
     // Null = use the default bottom-center placement. Set once the user drags the
     // small background indicator to a spot they prefer.
     public double? IndicatorPositionX { get; set; }

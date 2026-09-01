@@ -23,6 +23,7 @@
                     <Button Classes="navIconBtn navIconBtnActive" Name="TabRecorderBtn" Content="&#x2302;" ToolTip.Tip="Aufnahme" />
                     <Button Classes="navIconBtn" Name="TabHistoryBtn" Content="&#x1F550;" ToolTip.Tip="Verlauf" />
                     <Button Classes="navIconBtn" Name="TabDictionaryBtn" Content="&#x1F4D6;" ToolTip.Tip="Wörterbuch" />
+                    <Button Classes="navIconBtn" Name="TabNotesBtn" Content="&#x1F4DD;" ToolTip.Tip="Notizen" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Spacing="4" HorizontalAlignment="Center">
@@ -61,7 +62,7 @@
 
                     <!-- Left column: Verlauf-Vorschau + Transkript -->
                     <Grid Grid.Column="0" RowDefinitions="*,16,*">
-                        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        <Border Grid.Row="0" Name="HistoryPreviewCard" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
                                 BorderThickness="1" CornerRadius="16" Padding="18">
                             <Grid RowDefinitions="Auto,*">
                                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
@@ -87,7 +88,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Row="2" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        <Border Grid.Row="2" Name="TranscriptCard" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
                                 BorderThickness="1" CornerRadius="16" Padding="18">
                             <Grid RowDefinitions="Auto,*,Auto">
                                 <TextBlock Grid.Row="0" Text="TRANSKRIPT" FontSize="11" FontWeight="SemiBold"
@@ -107,7 +108,7 @@
 
                     <!-- Right column: Statistik + 7-Tage-Diagramm + Wörterbuch-Vorschau -->
                     <Grid Grid.Column="2" RowDefinitions="Auto,16,*,16,Auto">
-                        <Border Grid.Row="0" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        <Border Grid.Row="0" Name="StatsCard" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
                                 BorderThickness="1" CornerRadius="16" Padding="16">
                             <StackPanel Spacing="10">
                                 <TextBlock Text="STATISTIK" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiary}" />
@@ -129,10 +130,12 @@
                                                Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Text="Letzte Aufnahme" FontSize="10.5" Foreground="{DynamicResource TextTertiary}" />
                                 </StackPanel>
+                                <TextBlock Name="VersionText" Text="" FontSize="10" FontFamily="Consolas,monospace"
+                                           Foreground="{DynamicResource TextTertiary}" HorizontalAlignment="Right" />
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Row="2" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        <Border Grid.Row="2" Name="ChartCard" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
                                 BorderThickness="1" CornerRadius="16" Padding="16">
                             <StackPanel Spacing="8">
                                 <TextBlock Text="LETZTE 7 TAGE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiary}" />
@@ -166,7 +169,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Row="4" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                        <Border Grid.Row="4" Name="DictionaryPreviewCard" Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
                                 BorderThickness="1" CornerRadius="16" Padding="16">
                             <StackPanel Spacing="10">
                                 <Grid ColumnDefinitions="*,Auto">
@@ -329,8 +332,23 @@
                     </StackPanel>
                 </ScrollViewer>
 
+                <!-- Page: Notes -->
+                <Grid Name="NotesPage" RowDefinitions="Auto,*" IsVisible="False">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,14">
+                        <TextBlock Grid.Column="0" Text="Notizen" FontSize="22" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <Button Grid.Column="1" Classes="ghost" Name="NewNoteBtn" Content="+ Notiz" Margin="0,0,16,0" />
+                        <Button Grid.Column="2" Classes="ghost" Name="NewProjectBtn" Content="+ Projekt" Margin="0,0,16,0" />
+                        <Button Grid.Column="3" Classes="ghost" Name="ToggleCompletedNotesBtn" Content="Erledigt ausblenden" />
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Name="NotesBoardHost" Orientation="Horizontal" Spacing="12" />
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Page: Settings -->
-                <StackPanel Name="SettingsPage" IsVisible="False" Spacing="20">
+                <ScrollViewer Name="SettingsPage" IsVisible="False">
+                <StackPanel Spacing="20">
                     <TextBlock Text="Einstellungen" FontSize="22" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,8" />
 
@@ -410,7 +428,52 @@
                                        FontSize="12" Foreground="{DynamicResource TextSecondary}" />
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Text="NOTIZEN" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextTertiary}" Margin="0,4,0,-8" />
+
+                    <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                            BorderThickness="1" CornerRadius="12" Padding="18">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="Notiz-Hotkey" FontWeight="Medium"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="Eigene Push-to-Talk-Taste nur für Sprachnotizen, getrennt vom normalen Diktat-Hotkey"
+                                           FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" Name="NotesHotkeyPresetCombo" MinWidth="160" />
+                        </Grid>
+                    </Border>
+
+                    <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                            BorderThickness="1" CornerRadius="12" Padding="18">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Projekte verwalten" FontWeight="Medium"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="Klick auf einen Namen zum Umbenennen — Notizen mit diesem Projekt werden automatisch mit umbenannt."
+                                           FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Name="NotesProjectsListHost" Spacing="8" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource BgPanel}" BorderBrush="{DynamicResource BorderSubtle}"
+                            BorderThickness="1" CornerRadius="12" Padding="18">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="Notizen-Speicherort" FontWeight="Medium"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Name="NotesFolderPathText" FontFamily="Consolas,monospace" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                                <TextBlock Text="Zeig auf einen Ordner, den z. B. Google Drive automatisch synchronisiert, um von mehreren Geräten darauf zuzugreifen."
+                                           FontSize="12" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Name="ChooseNotesFolderBtn" Content="Ordner wählen…" />
+                        </Grid>
+                    </Border>
                 </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>
